@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather API Dashboard</title>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      padding: 10px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .weather-card {
+      background-color: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 4px;
+    }
+
+    .saved-locations {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .location-card {
+      background-color: #e8f5e9;
+      border-radius: 5px;
+      padding: 10px;
+      width: calc(50% - 10px);
+    }
+
+    .location-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .btn-edit,
+    .btn-delete {
+      padding: 5px;
+      cursor: pointer;
+    }
+
+    .btn-edit {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .btn-delete {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .response-info {
+      background-color: #fff3e0;
+      border-left: 4px solid #ff9800;
+      padding: 10px;
+      margin-top: 15px;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+
+    .tabs {
+      display: flex;
+      margin-bottom: 15px;
+    }
+
+    .tab {
+      padding: 10px 15px;
+      background-color: #ddd;
+      cursor: pointer;
+      margin-right: 5px;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .tab.active {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Weather API Dashboard</h1>
+
+  <div class="container">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="get">GET Weather</div>
+      <div class="tab" data-tab="post">POST Location</div>
+      <div class="tab" data-tab="put">PUT Location</div>
+      <div class="tab" data-tab="delete">DELETE Location</div>
+    </div>
+
+    <!-- GET -->
+    <div class="tab-content active" id="get">
+      <h2>Get Weather Data</h2>
+
+      <form id="getForm">
+        <div class="form-group">
+          <label for="city">City Name:</label>
+          <input type="text" id="city" placeholder="Enter city name (e.g., London)">
+        </div>
+
+        <button type="submit">Get Weather</button>
+      </form>
+
+      <div class="weather-display" id="weatherResult"></div>
+    </div>
+
+    <!-- POST -->
+    <div class="tab-content" id="post">
+      <h2>Save Location (POST Request)</h2>
+
+      <form id="postForm">
+        <div class="form-group">
+          <label for="locationName">Location Name:</label>
+          <input type="text" id="locationName" placeholder="Enter location name">
+        </div>
+
+        <div class="form-group">
+          <label for="locationCity">City:</label>
+          <input type="text" id="locationCity" placeholder="Enter city">
+        </div>
+
+        <div class="form-group">
+          <label for="country">Country:</label>
+          <input type="text" id="country" placeholder="Enter country code (e.g., US)">
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes:</label>
+          <input type="text" id="notes" placeholder="Optional notes">
+        </div>
+
+        <button type="submit">Save Location</button>
+      </form>
+    </div>
+
+    <!-- PUT -->
+    <div class="tab-content" id="put">
+      <h2>Edit Location (PUT Request)</h2>
+      <div id="editSection"></div>
+    </div>
+
+    <!-- DELETE -->
+    <div class="tab-content" id="delete">
+      <h2>Delete Location (DELETE Request)</h2>
+      <div id="deleteSection"></div>
+    </div>
+
+    <!-- Saved Locations -->
+    <div class="saved-locations" id="savedLocations"></div>
+
+    <!-- Response -->
+    <div class="response-info" id="responseInfo"></div>
+
+  </div>
+
+  <!-- JS -->
+  <script src="script.js"></script>
+
+</body>
+</html>
