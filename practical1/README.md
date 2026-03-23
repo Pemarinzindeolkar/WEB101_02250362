@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+Project Overview
 
-## Getting Started
+The project is a web application built with Next.js technology. It includes features like sidebar navigation, video feed layout, and multiple pages like profile, upload, explore, and following. The project is based on the concept of component-based design and modern frontend development.
 
-First, run the development server:
+**Technology Stack**
+**Framework**: Next.js (React)
+**State Management**: React Context API
+**Styling**: Tailwind CSS
+**Form Handling**: React Hook Form
+**Data Fetching**: Built-in fetch/static data
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**Setup Instructions**
+1. Clone the repository
+   ```bash
+   git clone [repository-url]
+   ```
+2. Install dependencies
+   ```bash
+   npm install
+   ```
+3. Start development server
+   ```bash
+   npm run dev
+   ```
+4. Open in browser
+   ```bash
+   http://localhost:3000
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Application Structure**
+**Pages/Routes**: Home (Video Feed), Profile, Upload, Explore, Following, Live
+**Component Structure**: Component organization - layout (MainLayout, Sidebar), UI components (VideoCard, VideoFeed)
+**State Management**: Basic state management using React hooks and Context API
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+**Key Components**
+1. **Video Card**: Component to display video content.
+2. **Video Feed**: Component to display a list of video cards.
+3. **Main Layout**: Component to display the general layout with a sidebar.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Authentication**
+No authentication is used in this project. This project only includes UI and layout design.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Features Implemented**
+1. **Video Feed**: Implemented a video feed feature using components.
+2. **Navigation**: Implemented navigation between different pages using a sidebar.
+3. **Upload Page**: Implemented the UI design for the video upload feature.
+4. **Profile Page**: Implemented the UI design for the profile feature.
