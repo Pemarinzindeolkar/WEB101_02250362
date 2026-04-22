@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Development cache
+.dev/
+.cache/
+*.log
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large files
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+
+# Uploads
+uploads/
+EOF
