@@ -7,8 +7,9 @@ const videoService = {
       const params = { limit };
       if (cursor) params.cursor = cursor;
       
-      const response = await api.get('/api/videos', { params });
-      // Return a consistent structure even if no data
+      // REMOVED /api prefix - baseURL already has it
+      const response = await api.get('/videos', { params });
+      
       return {
         videos: response.data?.videos || response.data || [],
         pagination: response.data?.pagination || { hasNextPage: false, nextCursor: null }
@@ -28,7 +29,9 @@ const videoService = {
       const params = { limit };
       if (cursor) params.cursor = cursor;
       
-      const response = await api.get('/api/videos/following', { params });
+      // REMOVED /api prefix
+      const response = await api.get('/videos/following', { params });
+      
       return {
         videos: response.data?.videos || response.data || [],
         pagination: response.data?.pagination || { hasNextPage: false, nextCursor: null }
@@ -45,7 +48,8 @@ const videoService = {
   // Get single video by ID
   getVideo: async (videoId) => {
     try {
-      const response = await api.get(`/api/videos/${videoId}`);
+      // REMOVED /api prefix
+      const response = await api.get(`/videos/${videoId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching video:', error);
@@ -56,7 +60,8 @@ const videoService = {
   // Like/unlike video
   likeVideo: async (videoId) => {
     try {
-      const response = await api.post(`/api/videos/${videoId}/like`);
+      // REMOVED /api prefix
+      const response = await api.post(`/videos/${videoId}/like`);
       return response.data;
     } catch (error) {
       console.error('Error liking video:', error);
@@ -67,7 +72,8 @@ const videoService = {
   // Add comment to video
   addComment: async (videoId, content) => {
     try {
-      const response = await api.post(`/api/videos/${videoId}/comments`, { content });
+      // REMOVED /api prefix
+      const response = await api.post(`/videos/${videoId}/comments`, { content });
       return response.data;
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -78,7 +84,8 @@ const videoService = {
   // Get video comments
   getComments: async (videoId) => {
     try {
-      const response = await api.get(`/api/videos/${videoId}/comments`);
+      // REMOVED /api prefix
+      const response = await api.get(`/videos/${videoId}/comments`);
       return response.data;
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -89,7 +96,8 @@ const videoService = {
   // Upload video
   uploadVideo: async (formData) => {
     try {
-      const response = await api.post('/api/videos/upload', formData, {
+      // REMOVED /api prefix
+      const response = await api.post('/videos', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -104,7 +112,8 @@ const videoService = {
   // Delete video
   deleteVideo: async (videoId) => {
     try {
-      const response = await api.delete(`/api/videos/${videoId}`);
+      // REMOVED /api prefix
+      const response = await api.delete(`/videos/${videoId}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting video:', error);

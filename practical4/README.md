@@ -1,78 +1,196 @@
-TikTok-style Web Interface
-Project Overview
-The project is a basic web-based "TikTok-style Web Interface" that I built to demonstrate modern web application development using Next.js and Tailwind CSS. This project enables users to view a video feed, navigate between different pages (For You, Following, Explore, Live, Upload, Profile), and includes login/signup functionality with form validation. This project uses component-based architecture and offers an organized way of building scalable web interfaces.
+# TikTok-style Web Interface Practical 4
 
-Technology Stack
-Framework: Next.js (React-based)
+## Project Overview
 
-Styling: Tailwind CSS (Utility-first CSS framework)
+The project is a full-stack web-based "TikTok-style Web Interface" that I built to demonstrate modern web application development using Next.js for the frontend and Express.js with Supabase for the backend.
 
-Icons: React Icons
+---
 
-Form Handling: React Hook Form
+## Technology Stack
 
-Language: JavaScript/JSX
+### Frontend:
+- Framework: Next.js (React-based)
+- Styling: Tailwind CSS
+- HTTP Client: Axios
+- State Management: React Context API
 
-Setup Instructions
-Clone the repository
+### Backend:
+- Runtime: Node.js with Express.js
+- Database & Auth: Supabase
+- Port: 5001 (backend), 3000 (frontend)
 
-bash
+---
+
+## Setup Instructions
+
+### 1. Clone the repository
+
+```bash
 git clone https://github.com/Pemarinzindeolkar/WEB101_02250362.git
-Navigate to the project directory
+cd practical4
+```
 
-bash
-cd practical1
-Install dependencies
+### 2. Install frontend dependencies
 
-bash
+```bash
 npm install
-Start development server
+```
 
-bash
+### 3. Install backend dependencies
+
+```bash
+cd backend
+npm install
+```
+
+### 4. Configure environment variables
+
+Create `.env.local` in frontend root:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLIC_KEY=your-supabase-anon-key
+NEXT_PUBLIC_API_URL=http://localhost:5001/api
+```
+
+### 5. Start backend server
+
+```bash
 npm run dev
-Open the application
-Navigate to http://localhost:3000 in your browser
+```
 
-State Management:
-Used React's built-in useState and props for component state management
+### 6. Start frontend server
 
-Key Components
-MainLayout Component:
-Provides the sidebar navigation and header structure that persists across all pages
+```bash
+npm run dev
+```
 
-VideoCard Component:
-Reusable component that displays individual video content with user information and interaction buttons
+### 7. Open application
 
-VideoFeed Component:
-Manages and displays a collection of VideoCard components in a scrollable feed
+Navigate to http://localhost:3000
 
-Login/Signup Forms:
-Implements form validation using React Hook Form for user authentication
+---
 
-Authentication Flow
-This application includes basic login and signup pages with form validation. The authentication flow demonstrates:
-Email validation using regular expressions
-Password strength validation
-Confirm password matching
-Form submission handling with error messages
+## State Management
 
-Note: This is a front-end demonstration only; no backend authentication is implemented.
+Used React's built-in useState, useEffect, and Context API for component state management.
 
-Features Implemented
-Layout & Navigation (GET-style routing):
-I have implemented a complete layout structure with sidebar navigation that allows users to navigate between different pages using Next.js file-based routing.
+---
 
-Video Feed Display:
-I have created reusable VideoCard and VideoFeed components to display video content in a TikTok-style scrolling feed on the main page.
+## Key Components
 
-Multiple Pages:
-I have created six different pages (Following, Explore, Live, Upload, Profile) each with unique content and layout integration.
+### MainLayout Component
+Provides the sidebar navigation and header structure that persists across all pages.
 
-Form Validation (Login/Signup):
-I have implemented login and signup forms with comprehensive validation using React Hook Form, including email format validation, password strength checking, and error message display.
+### VideoCard Component
+Reusable component that displays individual video content with user information and interaction buttons.
 
-Notes
-The application uses Tailwind CSS for styling; no custom CSS files were written
-Video data is currently using placeholder/demo content as this is a front-end interface demonstration
-The login/signup functionality demonstrates form validation only and does not connect to a real authentication backend
-All components are reusable and follow the component-based architecture principles of React
+### VideoFeed Component
+Manages and displays a collection of VideoCard components in a scrollable feed.
+
+### Login/Signup Forms
+Implements form validation using React Hook Form for user authentication.
+
+---
+
+## Authentication Flow
+
+**Note:** Unlike the initial frontend-only version, this application now includes complete backend authentication.
+
+1. Registration: User submits email, username, password → Backend hashes password → Creates user → Returns JWT token
+
+2. Login: User submits email and password → Backend verifies credentials → Returns JWT token
+
+3. Session Persistence: Frontend checks localStorage for existing token → Validates with backend
+
+4. Authenticated Requests: Axios interceptor automatically attaches JWT token to every request
+
+---
+
+## Features Implemented
+
+### Layout & Navigation
+Implemented complete layout structure with sidebar navigation using Next.js file-based routing.
+
+### Video Feed Display
+Created reusable VideoCard and VideoFeed components to fetch and display real video content.
+
+### Multiple Pages
+Created seven different pages (For You, Following, Explore, Live, Upload, Profile).
+
+### Real Authentication
+Implemented login/signup forms connected to Express.js backend with JWT tokens.
+
+### Video Interactions
+- Like/unlike videos with optimistic UI updates
+- View and add comments to videos
+
+### Follow/Unfollow Functionality
+- Discover users on Explore page
+- Follow/unfollow with one click
+- Personalized "Following" feed
+
+### Dynamic Profile Pages
+- Dynamic routes (/profile/[userId])
+- Display user's uploaded videos
+
+### Video Upload
+- Authenticated users can upload videos with captions
+- Upload progress tracking using Axios
+
+---
+
+
+## Known Challenges & Solutions
+
+### Challenge 1: CORS and Network Errors
+**Issue:** Frontend couldn't communicate with backend due to port mismatch.
+**Solution:** Configured CORS in Express backend and created centralized Axios instance.
+
+### Challenge 2: JWT Token Management
+**Issue:** Manually attaching tokens to every request was repetitive.
+**Solution:** Implemented Axios request interceptor for automatic token attachment.
+
+### Challenge 3: 404 Route Not Found
+**Issue:** Frontend called /auth/login but backend expected /api/auth/login.
+**Solution:** Standardized API paths with /api prefix in baseURL.
+
+### Challenge 4: 401 Unauthorized on Login
+**Issue:** Login returned 401 because no users existed in database.
+**Solution:** Registered a user first using signup form, then logged in successfully.
+
+### Challenge 5: Optimistic UI Updates for Likes
+**Issue:** Like button felt laggy when waiting for API response.
+**Solution:** Implemented optimistic updates - increments immediately, reverts only on failure.
+
+---
+
+## Notes
+
+- The application uses Tailwind CSS for styling; no custom CSS files were written
+- Video data is stored in Supabase and served through the Express backend
+- Authentication uses JWT tokens stored in localStorage
+- Both frontend (port 3000) and backend (port 5001) must be running simultaneously
+
+---
+
+## Future Improvements
+
+- Add infinite scroll pagination for video feeds
+- Implement video comments section with nested replies
+- Add user search functionality
+- Implement edit profile page
+- Deploy to production (Vercel + Railway/Supabase)
+
+---
+
+## References
+
+- Next.js Documentation: https://nextjs.org/docs
+- Tailwind CSS: https://tailwindcss.com/docs
+- React Hook Form: https://react-hook-form.com
+- Axios: https://axios-http.com
+- Express.js: https://expressjs.com
+- Supabase: https://supabase.com/docs
+- JWT: https://jwt.io
+```

@@ -1,0 +1,6 @@
+{
+  "/explore/page": "app/explore/page.js",
+  "/following/page": "app/following/page.js",
+  "/live/page": "app/live/page.js",
+  "/page": "app/page.js"
+}
