@@ -1,24 +1,35 @@
 'use client';
-import { useAuth } from '@/contexts/authContext';
-import VideoFeed from '@/components/ui/VideoFeed';
 
-export default function FollowingPage() {
-  const { user } = useAuth();
+import { useEffect } from 'react';
+import VideoFeed from '../../components/ui/VideoFeed';
+import { useAuth } from '../../contexts/authContext';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
-  if (!user) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-center">
-          <p className="text-gray-500">Please log in to see videos from people you follow</p>
+  // Redirect to login if not authenticated
+  export default function FollowingPage() {
+    const { isAuthenticated, loading } = useAuth();
+    const router = useRouter();
+
+    // Redirect to login if not authenticated
+    useEffect(() => {
+      if (!loading && !isAuthenticated) {
+        toast.error('Please log in to view your following feed');
+        router.push('/');
+      }
+    }, [isAuthenticated, loading, router]);
+    
+    if (loading) {
+      return (
+        <div className="flex justify-center py-10">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-pink-500 border-t-transparent"></div>
         </div>
-      </div>
+      );
+    }
+
+    return (
+      <main className="flex min-h-screen flex-col items-center">
+        <VideoFeed feedType="following" />
+      </main>
     );
   }
-
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Following</h1>
-      <VideoFeed feedType="following" />
-    </div>
-  );
-}

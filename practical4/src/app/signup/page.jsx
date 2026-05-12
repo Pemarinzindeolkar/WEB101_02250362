@@ -1,193 +1,252 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import Link from 'next/link';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../contexts/authContext';
+import { uploadVideoToStorage, uploadThumbnailToStorage, createVideo } from '../../services/uploadService';
+import toast from 'react-hot-toast';
+import { FaCloudUploadAlt, FaSpinner } from 'react-icons/fa';
 
-export default function SignupPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
+const UploadPage = () => {
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const [videoFile, setVideoFile] = useState(null);
+  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
+  const [caption, setCaption] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const videoInputRef = useRef(null);
+  const thumbnailInputRef = useRef(null);
 
-  const onSubmit = async (data) => {
-    setIsLoading(true);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
 
-    // In a real app, you would call a registration API here
-    console.log('Signup data:', data);
+  if (!isAuthenticated) return null;
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      alert('Registration successful (demo only)');
-    }, 1500);
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      toast.error('Please select a video file');
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error('File size too large (max 100MB)');
+      return;
+    }
+
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
   };
 
-  const password = watch('password');
+  const handleThumbnailChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file for the thumbnail');
+      return;
+    }
+
+    setThumbnailFile(file);
+    setThumbnailPreview(URL.createObjectURL(file));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!videoFile) {
+      toast.error('Please select a video to upload');
+      return;
+    }
+
+    if (!caption.trim()) {
+      toast.error('Please add a caption');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+
+      const uploadToast = toast.loading('Uploading video... 0%');
+
+      const videoUploadResult = await uploadVideoToStorage(user.id, videoFile);
+      setUploadProgress(50);
+      toast.loading('Uploading video... 50%', { id: uploadToast });
+
+      let thumbnailUploadResult = null;
+      if (thumbnailFile) {
+        thumbnailUploadResult = await uploadThumbnailToStorage(user.id, thumbnailFile);
+      }
+
+      setUploadProgress(75);
+      toast.loading('Uploading video... 75%', { id: uploadToast });
+
+      const videoData = {
+        caption,
+        videoUrl: videoUploadResult.url,
+        videoStoragePath: videoUploadResult.storagePath,
+      };
+
+      if (thumbnailUploadResult) {
+        videoData.thumbnailUrl = thumbnailUploadResult.url;
+        videoData.thumbnailStoragePath = thumbnailUploadResult.storagePath;
+      }
+
+      await createVideo(videoData);
+
+      setUploadProgress(100);
+      toast.success('Video uploaded successfully!', { id: uploadToast });
+      router.push('/');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Failed to upload video');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="max-w-3xl mx-auto p-4">
+      <h1 className="mb-6 text-2xl font-bold">Upload Video</h1>
 
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Sign up for TikTok
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Create a profile, follow other accounts, make your own videos, and more
-          </p>
-        </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="rounded-md shadow-sm -space-y-px">
-
-            {/* Username */}
-            <div className="mb-4">
-              <label htmlFor="username" className="sr-only">Username</label>
-              <input
-                id="username"
-                type="text"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-red-500 focus:border-red-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
-                {...register('username', {
-                  required: 'Username is required',
-                  minLength: {
-                    value: 3,
-                    message: 'Username must be at least 3 characters'
-                  },
-                  pattern: {
-                    value: /^[a-zA-Z0-9_]+$/,
-                    message: 'Username can only contain letters, numbers and underscores'
-                  }
-                })}
-              />
-              {errors.username && (
-                <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>
+      <div className="rounded-lg border border-gray-200 p-6">
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Video upload area */}
+            <div className="flex flex-col">
+              <h2 className="text-lg font-semibold mb-2">Video</h2>
+              {videoPreview ? (
+                <div className="mb-4 aspect-video w-full overflow-hidden rounded-lg bg-black">
+                  <video
+                    src={videoPreview}
+                    className="h-full w-full object-contain"
+                    controls
+                  />
+                </div>
+              ) : (
+                <div
+                  onClick={() => videoInputRef.current?.click()}
+                  className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100"
+                >
+                  <FaCloudUploadAlt size={48} className="mb-2 text-gray-400" />
+                  <p className="text-center text-gray-500">
+                    Click to upload a video
+                    <br />
+                    <span className="text-sm">MP4 or WebM (max 100MB)</span>
+                  </p>
+                </div>
               )}
-            </div>
-
-            {/* Email */}
-            <div className="mb-4">
-              <label htmlFor="email" className="sr-only">Email address</label>
               <input
-                id="email"
-                type="email"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-red-500 focus:border-red-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address'
-                  }
-                })}
+                type="file"
+                ref={videoInputRef}
+                onChange={handleVideoChange}
+                accept="video/*"
+                className="hidden"
               />
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+              {videoFile && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Selected: {videoFile.name}
+                </p>
               )}
-            </div>
 
-            {/* Password */}
-            <div className="mb-4">
-              <label htmlFor="password" className="sr-only">Password</label>
-              <input
-                id="password"
-                type="password"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-red-500 focus:border-red-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                {...register('password', {
-                  required: 'Password is required',
-                  minLength: {
-                    value: 8,
-                    message: 'Password must be at least 8 characters'
-                  },
-                  pattern: {
-                    value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[$@$!%*?&])[A-Za-z\d$@$!%*?&]{8,}$/,
-                    message:
-                      'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
-                  }
-                })}
-              />
-              {errors.password && (
-                <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
+              {/* Thumbnail upload area */}
+              <h2 className="text-lg font-semibold mb-2 mt-6">Thumbnail (Optional)</h2>
+              {thumbnailPreview ? (
+                <div className="mb-4 aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
+                  <img
+                    src={thumbnailPreview}
+                    alt="Thumbnail preview"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div
+                  onClick={() => thumbnailInputRef.current?.click()}
+                  className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100"
+                >
+                  <FaCloudUploadAlt size={36} className="mb-2 text-gray-400" />
+                  <p className="text-center text-gray-500">
+                    Click to upload a thumbnail
+                    <br />
+                    <span className="text-sm">JPG, PNG or GIF</span>
+                  </p>
+                </div>
               )}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label htmlFor="confirmPassword" className="sr-only">
-                Confirm Password
-              </label>
               <input
-                id="confirmPassword"
-                type="password"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-red-500 focus:border-red-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm Password"
-                {...register('confirmPassword', {
-                  required: 'Please confirm your password',
-                  validate: value =>
-                    value === password || 'Passwords do not match'
-                })}
+                type="file"
+                ref={thumbnailInputRef}
+                onChange={handleThumbnailChange}
+                accept="image/*"
+                className="hidden"
               />
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.confirmPassword.message}
+              {thumbnailFile && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Selected: {thumbnailFile.name}
                 </p>
               )}
             </div>
 
-          </div>
+            {/* Video details */}
+            <div>
+              <div className="mb-4">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Caption
+                </label>
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 p-2"
+                  rows="4"
+                  placeholder="What's this video about?"
+                  maxLength="150"
+                ></textarea>
+                <p className="mt-1 text-right text-xs text-gray-500">
+                  {caption.length}/150
+                </p>
+              </div>
 
-          {/* Terms */}
-          <div className="flex items-center">
-            <input
-              id="terms"
-              type="checkbox"
-              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-              {...register('terms', {
-                required: 'You must agree to the terms and conditions'
-              })}
-            />
-            <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
-              I agree to the{' '}
-              <a href="#" className="font-medium text-red-600 hover:text-red-500">
-                Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="#" className="font-medium text-red-600 hover:text-red-500">
-                Privacy Policy
-              </a>
-            </label>
-          </div>
+              {uploading && (
+                <div className="mb-4">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className="bg-blue-500 h-2.5 rounded-full"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="mt-1 text-center text-xs text-gray-500">
+                    Uploading: {uploadProgress}%
+                  </p>
+                </div>
+              )}
 
-          {errors.terms && (
-            <p className="text-red-500 text-xs">{errors.terms.message}</p>
-          )}
-
-          {/* Button */}
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Creating account...' : 'Sign up'}
-            </button>
+              <button
+                type="submit"
+                disabled={uploading || !videoFile}
+                className="w-full rounded-lg bg-blue-500 py-3 text-white hover:bg-blue-600 disabled:bg-blue-300"
+              >
+                {uploading ? (
+                  <span className="flex items-center justify-center">
+                    <FaSpinner className="mr-2 animate-spin" /> Uploading...
+                  </span>
+                ) : (
+                  'Post'
+                )}
+              </button>
+            </div>
           </div>
         </form>
-
-        {/* Login Link */}
-        <div className="text-center mt-4">
-          <p className="text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link
-              href="/login"
-              className="font-medium text-red-600 hover:text-red-500"
-            >
-              Log in
-            </Link>
-          </p>
-        </div>
-
       </div>
     </div>
   );
-}
+};
+
+export default UploadPage;

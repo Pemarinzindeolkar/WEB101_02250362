@@ -1,118 +1,79 @@
-import api from '@/lib/api-config';
+import apiClient from '../lib/api-config';
 
-const userService = {
-  // Get current user profile
-  getCurrentUser: async () => {
-    try {
-      const response = await api.get('/api/users/me');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching current user:', error);
-      throw error;
-    }
-  },
-
-  // Get user by ID
-  getUser: async (userId) => {
-    try {
-      const response = await api.get(`/api/users/${userId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching user:', error);
-      throw error;
-    }
-  },
-
-  // Update user profile
-  updateUser: async (userId, userData) => {
-    try {
-      const response = await api.put(`/api/users/${userId}`, userData);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating user:', error);
-      throw error;
-    }
-  },
-
-  // Follow user
-  followUser: async (userId) => {
-    try {
-      const response = await api.post(`/api/users/${userId}/follow`);
-      return response.data;
-    } catch (error) {
-      console.error('Error following user:', error);
-      throw error;
-    }
-  },
-
-  // Unfollow user
-  unfollowUser: async (userId) => {
-    try {
-      const response = await api.delete(`/api/users/${userId}/follow`);
-      return response.data;
-    } catch (error) {
-      console.error('Error unfollowing user:', error);
-      throw error;
-    }
-  },
-
-  // Get user's followers
-  getFollowers: async (userId) => {
-    try {
-      const response = await api.get(`/api/users/${userId}/followers`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching followers:', error);
-      throw error;
-    }
-  },
-
-  // Get users that a user is following
-  getFollowing: async (userId) => {
-    try {
-      const response = await api.get(`/api/users/${userId}/following`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching following:', error);
-      throw error;
-    }
-  },
-
-  // Get user's videos
-  getUserVideos: async (userId, cursor = null, limit = 100) => {
-    try {
-      const params = { limit };
-      if (cursor) params.cursor = cursor;
-      
-      const response = await api.get(`/api/users/${userId}/videos`, { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching user videos:', error);
-      throw error;
-    }
-  },
-
-  // Search users
-  searchUsers: async (query) => {
-    try {
-      const response = await api.get(`/api/users/search?q=${query}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error searching users:', error);
-      throw error;
-    }
-  },
-
-  // Get suggested users
-  getSuggestedUsers: async (limit = 100) => {
-    try {
-      const response = await api.get(`/api/users/suggested?limit=${limit}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching suggested users:', error);
-      throw error;
-    }
+export const getUserById = async (userId) => {
+  try {
+    const response = await apiClient.get(`/users/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching user ${userId}:`, error);
+    throw error;
   }
 };
 
-export default userService;
+export const updateUser = async (id, formData) => {
+  try {
+    const response = await apiClient.put(`/users/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating user ${id}:`, error);
+    throw error;
+  }
+};
+
+export const followUser = async (userId) => {
+  try {
+    console.log(`Following user ${userId}`);
+    const response = await apiClient.post(`/users/${userId}/follow`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error following user ${userId}:`, error);
+    throw error;
+  }
+};
+
+export const unfollowUser = async (userId) => {
+  try {
+    console.log(`Unfollowing user ${userId}`);
+    const response = await apiClient.delete(`/users/${userId}/follow`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error unfollowing user ${userId}:`, error);
+    throw error;
+  }
+};
+
+export const getUserFollowers = async (id) => {
+  try {
+    const response = await apiClient.get(`/users/${id}/followers`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching followers for user ${id}:`, error);
+    throw error;
+  }
+};
+
+export const getUserFollowing = async (id) => {
+  try {
+    const response = await apiClient.get(`/users/${id}/following`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching following for user ${id}:`, error);
+    throw error;
+  }
+};
+
+export const getUserVideos = async (userId) => {
+  try {
+   
+    const id = typeof userId === 'object' ? userId.id : userId;
+    const response = await apiClient.get(`/users/${id}/videos`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching videos for user ${userId}:`, error);
+    return { videos: [] };
+  }
+};

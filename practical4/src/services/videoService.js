@@ -1,125 +1,106 @@
-import api from '@/lib/api-config';
+import apiClient from '../lib/api-config';
 
-const videoService = {
-  // Get all videos (For You feed)
-  getVideos: async (cursor = null, limit = 10) => {
-    try {
-      const params = { limit };
-      if (cursor) params.cursor = cursor;
-      
-      // REMOVED /api prefix - baseURL already has it
-      const response = await api.get('/videos', { params });
-      
-      return {
-        videos: response.data?.videos || response.data || [],
-        pagination: response.data?.pagination || { hasNextPage: false, nextCursor: null }
-      };
-    } catch (error) {
-      console.error('Error fetching videos:', error);
-      return {
-        videos: [],
-        pagination: { hasNextPage: false, nextCursor: null }
-      };
-    }
-  },
 
-  // Get following videos feed
-  getFollowingVideos: async (cursor = null, limit = 10) => {
-    try {
-      const params = { limit };
-      if (cursor) params.cursor = cursor;
-      
-      // REMOVED /api prefix
-      const response = await api.get('/videos/following', { params });
-      
-      return {
-        videos: response.data?.videos || response.data || [],
-        pagination: response.data?.pagination || { hasNextPage: false, nextCursor: null }
-      };
-    } catch (error) {
-      console.error('Error fetching following videos:', error);
-      return {
-        videos: [],
-        pagination: { hasNextPage: false, nextCursor: null }
-      };
+//uses cursor-based pagination
+export const getVideos = async ({ cursor, limit = 10 }) => {
+  try {
+    // Build query string with cursor if available
+    let queryParams = `limit=${limit}`;
+    if (cursor) {
+      queryParams += `&cursor=${cursor}`;
     }
-  },
-
-  // Get single video by ID
-  getVideo: async (videoId) => {
-    try {
-      // REMOVED /api prefix
-      const response = await api.get(`/videos/${videoId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching video:', error);
-      throw error;
-    }
-  },
-
-  // Like/unlike video
-  likeVideo: async (videoId) => {
-    try {
-      // REMOVED /api prefix
-      const response = await api.post(`/videos/${videoId}/like`);
-      return response.data;
-    } catch (error) {
-      console.error('Error liking video:', error);
-      throw error;
-    }
-  },
-
-  // Add comment to video
-  addComment: async (videoId, content) => {
-    try {
-      // REMOVED /api prefix
-      const response = await api.post(`/videos/${videoId}/comments`, { content });
-      return response.data;
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      throw error;
-    }
-  },
-
-  // Get video comments
-  getComments: async (videoId) => {
-    try {
-      // REMOVED /api prefix
-      const response = await api.get(`/videos/${videoId}/comments`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-      throw error;
-    }
-  },
-
-  // Upload video
-  uploadVideo: async (formData) => {
-    try {
-      // REMOVED /api prefix
-      const response = await api.post('/videos', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error uploading video:', error);
-      throw error;
-    }
-  },
-
-  // Delete video
-  deleteVideo: async (videoId) => {
-    try {
-      // REMOVED /api prefix
-      const response = await api.delete(`/videos/${videoId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error deleting video:', error);
-      throw error;
-    }
+    
+    const response = await apiClient.get(`/videos?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching videos:', error);
+    throw error;
   }
 };
 
-export default videoService;
+// uses cursor-based pagination for Following feed
+export const getFollowingVideos = async ({ cursor, limit = 10 }) => {
+  try {
+    let queryParams = `limit=${limit}`;
+    if (cursor) {
+      queryParams += `&cursor=${cursor}`;
+    }
+    
+    const response = await apiClient.get(`/videos/following?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching following videos:', error);
+    throw error;
+  }
+};
+
+export const getVideoById = async (id) => {
+  try {
+    const response = await apiClient.get(`/videos/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching video ${id}:`, error);
+    throw error;
+  }
+};
+
+//uses cursor-based pagination
+export const getUserVideos = async ({ id, cursor, limit = 10 }) => {
+  try {
+    let queryParams = `limit=${limit}`;
+    if (cursor) {
+      queryParams += `&cursor=${cursor}`;
+    }
+    
+    const response = await apiClient.get(`/users/${id}/videos?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching videos for user ${id}:`, error);
+    throw error;
+  }
+};
+
+export const getVideoComments = async (videoId) => {
+  try {
+    const response = await apiClient.get(`/videos/${videoId}/comments`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching comments for video ${videoId}:`, error);
+    return { comments: [] };
+  }
+};
+
+
+export const likeVideo = async (videoId) => {
+  try {
+    const response = await apiClient.post(`/videos/${videoId}/like`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error liking video ${videoId}:`, error);
+    throw error;
+  }
+};
+
+export const unlikeVideo = async (videoId) => {
+  try {
+    const response = await apiClient.delete(`/videos/${videoId}/like`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error unliking video ${videoId}:`, error);
+    throw error;
+  }
+};
+
+
+export const addComment = async (videoId, content) => {
+  try {
+    const response = await apiClient.post('/comments', {
+      videoId,
+      content
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error adding comment to video ${videoId}:`, error);
+    throw error;
+  }
+};

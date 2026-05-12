@@ -1,117 +1,157 @@
-'use client';
 import { useState } from 'react';
-import { useAuth } from '@/contexts/authContext';
+import { useForm } from 'react-hook-form';
+import { useAuth } from '../../contexts/authContext';
+import { useRouter } from 'next/navigation';
 
-// Login Form Component
-export const LoginForm = ({ onClose }) => {
+export const LoginForm = ({ onSuccess }) => {
+  const { register, handleSubmit, formState: { errors } } = useForm();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const success = await login(email, password);
-    setLoading(false);
-    if (success) {
-      onClose();
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+    try {
+      await login(data);
+      if (onSuccess) onSuccess();
+      router.push('/');
+    } catch (error) {
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
+        <label className="block text-sm font-medium text-gray-700">Email</label>
         <input
           type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-          required
+          {...register('email', { 
+            required: 'Email is required',
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: 'Invalid email address'
+            }
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
+        {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
       </div>
+      
       <div>
+        <label className="block text-sm font-medium text-gray-700">Password</label>
         <input
           type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-          required
+          {...register('password', { required: 'Password is required' })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
+        {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
       </div>
+      
       <button
         type="submit"
-        disabled={loading}
-        className="w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-600 disabled:bg-gray-400"
+        disabled={isLoading}
+        className="w-full rounded-md bg-blue-500 py-2 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
-        {loading ? 'Logging in...' : 'Log in'}
+        {isLoading ? 'Logging in...' : 'Log in'}
       </button>
     </form>
   );
 };
 
-// Register Form Component
-export const RegisterForm = ({ onClose }) => {
-  const { register } = useAuth();
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+export const SignupForm = ({ onSuccess }) => {
+  const { register, handleSubmit, formState: { errors }, watch } = useForm();
+  const { register: registerUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  
+  const password = watch('password', '');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const success = await register(username, email, password);
-    setLoading(false);
-    if (success) {
-      onClose();
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+    try {
+      await registerUser(data);
+      if (onSuccess) onSuccess();
+      router.push('/login');
+    } catch (error) {
+      console.error('Registration error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
+        <label className="block text-sm font-medium text-gray-700">Username</label>
         <input
           type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-          required
+          {...register('username', { 
+            required: 'Username is required',
+            minLength: {
+              value: 3,
+              message: 'Username must be at least 3 characters'
+            }
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
+        {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>}
       </div>
+      
       <div>
+        <label className="block text-sm font-medium text-gray-700">Email</label>
         <input
           type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-          required
+          {...register('email', { 
+            required: 'Email is required',
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: 'Invalid email address'
+            }
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
+        {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
       </div>
+      
       <div>
+        <label className="block text-sm font-medium text-gray-700">Password</label>
         <input
           type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-          required
+          {...register('password', { 
+            required: 'Password is required',
+            minLength: {
+              value: 6,
+              message: 'Password must be at least 6 characters'
+            }
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
+        {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
       </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
+        <input
+          type="password"
+          {...register('confirmPassword', { 
+            required: 'Please confirm your password',
+            validate: value => value === password || 'Passwords do not match'
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        />
+        {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>}
+      </div>
+      
       <button
         type="submit"
-        disabled={loading}
-        className="w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-600 disabled:bg-gray-400"
+        disabled={isLoading}
+        className="w-full rounded-md bg-blue-500 py-2 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
-        {loading ? 'Creating account...' : 'Sign up'}
+        {isLoading ? 'Signing up...' : 'Sign up'}
       </button>
     </form>
   );
 };
-
-// Default export for backward compatibility
-export default LoginForm;

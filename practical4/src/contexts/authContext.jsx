@@ -1,120 +1,100 @@
-'use client';
-import { createContext, useContext, useState, useEffect } from 'react';
-import supabase from '@/lib/supabase';
-import apiClient from '@/lib/api-config';
+"use client";
+
+import { createContext, useState, useContext, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import apiClient from '../lib/axios';
+import * as jwt_decode from 'jwt-decode';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
+  // Check if user is already logged in
   useEffect(() => {
-    // Check active session in Supabase
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          username: session.user.user_metadata?.username || session.user.email,
-          name: session.user.user_metadata?.name || session.user.email,
-        });
-        // Also store token for Express backend if needed
-        localStorage.setItem('token', session.access_token);
-      }
-      setLoading(false);
-    };
-    
-    getSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          username: session.user.user_metadata?.username || session.user.email,
-        });
-        localStorage.setItem('token', session.access_token);
-      } else {
-        setUser(null);
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwt_decode(token);
+        // Check if token is expired
+        if (decoded.exp * 1000 < Date.now()) {
+          localStorage.removeItem('token');
+          setUser(null);
+        } else {
+          setUser(decoded);
+          // Fetch user details
+          fetchUserDetails(decoded.id);
+        }
+      } catch (error) {
         localStorage.removeItem('token');
+        setUser(null);
       }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    }
+    setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  // Fetch more user details from backend
+  const fetchUserDetails = async (userId) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) throw error;
-      
-      const userData = {
-        id: data.user.id,
-        email: data.user.email,
-        username: data.user.user_metadata?.username || data.user.email,
-      };
-      
-      setUser(userData);
-      localStorage.setItem('token', data.session.access_token);
-      toast.success('Logged in successfully');
-      return true;
-    } catch (err) {
-      toast.error(err.message || 'Login failed');
-      return false;
+      const response = await apiClient.get(`/users/${userId}`);
+      setUser(prev => ({ ...prev, ...response.data }));
+    } catch (error) {
+      console.error('Error fetching user details:', error);
     }
   };
 
-  const register = async (username, email, password) => {
+  // Register a new user
+  const register = async (userData) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username: username,
-            name: username,
-          },
-        },
-      });
-      
-      if (error) throw error;
-      
-      toast.success('Account created successfully');
-      return true;
-    } catch (err) {
-      toast.error(err.message || 'Registration failed');
-      return false;
+      const response = await apiClient.post('users/register', userData);
+      toast.success('Registration successful! Please log in.');
+      return response.data;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed';
+      toast.error(message);
+      throw error;
     }
   };
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+  // Login user
+  const login = async (credentials) => {
+    try {
+      const response = await apiClient.post('users/login', credentials);
+      const { token, user } = response.data;
+      
+      localStorage.setItem('token', token);
+      setUser(user);
+      toast.success('Login successful!');
+      
+      return user;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Login failed';
+      toast.error(message);
+      throw error;
+    }
+  };
+
+  // Logout user
+  const logout = () => {
     localStorage.removeItem('token');
-    toast.success('Logged out');
+    setUser(null);
+    router.push('/');
+    toast.success('Logged out successfully');
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    loading,
+    register,
+    login,
+    logout,
+    isAuthenticated: !!user,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

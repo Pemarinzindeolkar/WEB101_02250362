@@ -1,102 +1,128 @@
-'use client';
-import { useState, useEffect } from 'react';
+"use client";
+
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import VideoCard from './VideoCard';
-import videoService from '@/services/videoService';
-import { useAuth } from '@/contexts/authContext';
+import { getVideos, getFollowingVideos } from '../../services/videoService';
+import toast from 'react-hot-toast';
+import useIntersectionObserver from '../../hooks/useIntersectionObserver';
+import { useAuth } from '../../contexts/authContext';
 
-export default function VideoFeed({ feedType = 'for-you' }) {
-  const { user } = useAuth();
-  const [videos, setVideos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [cursor, setCursor] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
 
+const VideoFeed = ({ feedType = 'forYou' }) => {
+  const { isAuthenticated } = useAuth();
+  const [loadMoreRef, isLoadMoreVisible] = useIntersectionObserver();
+
+  // Query key includes the feed type to cache separately
+  const queryKey = ['videos', feedType];
+  
+  // Select the appropriate fetch function based on feed type
+  const fetchFn = feedType === 'following' ? getFollowingVideos : getVideos;
+  
+  // Set up infinite query
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    status,
+  } = useInfiniteQuery({
+    queryKey,
+    queryFn: ({ pageParam }) => fetchFn({ cursor: pageParam }),
+    initialPageParam: null, // Start with no cursor
+    getNextPageParam: (lastPage) => lastPage.pagination.nextCursor,
+    enabled: feedType !== 'following' || isAuthenticated, // Don't fetch following feed if not authenticated
+  });
+
+  // Load more when the load more element becomes visible
   useEffect(() => {
-    fetchVideos();
-  }, [feedType]);
-
-  const fetchVideos = async () => {
-    try {
-      setLoading(true);
-      let response;
-      
-      if (feedType === 'following' && user) {
-        response = await videoService.getFollowingVideos(cursor);
-      } else {
-        response = await videoService.getVideos(cursor);
-      }
-      
-      // Make sure response has videos array
-      const newVideos = response?.videos || [];
-      
-      if (cursor) {
-        setVideos(prev => [...prev, ...newVideos]);
-      } else {
-        setVideos(newVideos);
-      }
-      
-      setHasMore(response?.pagination?.hasNextPage || false);
-      setCursor(response?.pagination?.nextCursor || null);
-    } catch (error) {
-      console.error('Error fetching videos:', error);
-      setVideos([]);
-    } finally {
-      setLoading(false);
+    if (isLoadMoreVisible && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-  };
+  }, [isLoadMoreVisible, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const handleVideoUpdate = (updatedVideo) => {
-    setVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
-  };
+  // Handle errors with toast
+  useEffect(() => {
+    if (error) {
+      toast.error('Failed to load videos. Please try again.');
+      console.error('Error loading videos:', error);
+    }
+  }, [error]);
 
-  if (loading && videos.length === 0) {
+  // Show loading state
+  if (status === 'pending' && !data) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading videos...</div>
+      <div className="flex justify-center py-10">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
       </div>
     );
   }
 
-  // Safe check - if videos is undefined or null, treat as empty array
-  const videoList = videos || [];
-  
-  if (videoList.length === 0) {
+  // Show error state
+  if (status === 'error' && !data) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500 text-center">
-          <p>No videos yet</p>
-          {feedType === 'following' && !user && (
-            <p className="text-sm mt-2">Log in to see videos from people you follow</p>
-          )}
-          {feedType === 'following' && user && (
-            <p className="text-sm mt-2">Follow some users to see their videos</p>
-          )}
-        </div>
+      <div className="text-center py-10">
+        <p className="text-red-500">Failed to load videos</p>
+        <button
+          onClick={() => fetchNextPage({ cancelRefetch: true })}
+          className="mt-4 rounded-lg bg-blue-500 px-4 py-2 text-white"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // Show empty state for following feed
+  if (feedType === 'following' && data?.pages[0]?.videos.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-gray-500">
+          You're not following anyone yet or the users you follow haven't posted any videos.
+        </p>
+      </div>
+    );
+  }
+
+  // Flatten all pages of videos
+  const videos = data?.pages.flatMap((page) => page.videos) || [];
+
+  if (videos.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-gray-500">No videos found.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {videoList.map((video) => (
-        <VideoCard 
-          key={video.id} 
-          video={video} 
-          onUpdate={handleVideoUpdate}
-        />
-      ))}
+    <div className="space-y-10">
+      {/* Render all videos */}
+      {videos.map((video, index) => (
+  <VideoCard key={`${video.id}-${index}`} video={video} />
+))}
       
-      {hasMore && (
-        <div className="flex justify-center py-8">
-          <button
-            onClick={fetchVideos}
-            disabled={loading}
-            className="px-6 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:bg-gray-500"
-          >
-            {loading ? 'Loading...' : 'Load More'}
-          </button>
+      {/* Loading indicator for next page */}
+      {isFetchingNextPage && (
+        <div className="flex justify-center py-5">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+        </div>
+      )}
+      
+      {/* Load more trigger element */}
+      {hasNextPage && !isFetchingNextPage && (
+        <div ref={loadMoreRef} className="h-20" />
+      )}
+      
+      {/* End of feed message */}
+      {!hasNextPage && videos.length > 0 && (
+        <div className="text-center py-5 text-gray-500">
+          You've reached the end of the feed.
         </div>
       )}
     </div>
   );
-}
+};
+
+export default VideoFeed;

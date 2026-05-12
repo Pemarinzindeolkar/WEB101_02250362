@@ -1,154 +1,238 @@
-'use client';
-import { useState } from 'react';
-import Link from 'next/link';
-import { 
-  FaHeart, FaRegHeart, FaComment, 
-  FaShare, FaMusic, FaBookmark, FaRegBookmark
-} from 'react-icons/fa';
-import videoService from '@/services/videoService';
-import { useAuth } from '@/contexts/authContext';
-import toast from 'react-hot-toast';
+"use client";
 
-export default function VideoCard({ video, onUpdate }) {
-  const { user } = useAuth();
-  const [liked, setLiked] = useState(video?.isLiked || false);
-  const [likesCount, setLikesCount] = useState(video?.likeCount || 0);
-  const [saved, setSaved] = useState(false);
-  const [showComments, setShowComments] = useState(false);
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { FaHeart, FaComment, FaShare, FaMusic, FaVolumeMute, FaVolumeUp } from "react-icons/fa";
+import { useAuth } from "../../contexts/authContext";
+import { likeVideo, unlikeVideo } from "../../services/videoService";
+import toast from "react-hot-toast";
 
-  const handleLike = async () => {
-    if (!user) {
-      toast.error('Please login to like videos');
-      return;
+const VideoCard = ({ video }) => {
+  const { user, isAuthenticated } = useAuth();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLiked, setIsLiked] = useState(video.isLiked || false);
+  const [likeCount, setLikeCount] = useState(video.likeCount || 0);
+  const [videoError, setVideoError] = useState(false);
+  const videoRef = useRef(null);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const getFullVideoUrl = (url) => {
+    if (!url) return null;
+    if (url.includes('supabase') || url.startsWith('http')) {
+      return url;
     }
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const serverUrl = baseUrl.includes('/api')
+      ? baseUrl.substring(0, baseUrl.indexOf('/api'))
+      : baseUrl;
+    return `${serverUrl}${url}`;
+  };
 
-    try {
-      const result = await videoService.likeVideo(video.id);
-      setLiked(result.liked);
-      setLikesCount(prev => result.liked ? prev + 1 : prev - 1);
-      
-      if (onUpdate) {
-        onUpdate({ ...video, isLiked: result.liked, likeCount: result.liked ? likesCount + 1 : likesCount - 1 });
+  const getAvatarUrl = (avatar) => {
+    if (!avatar) return null;
+    if (avatar.startsWith('http')) return avatar;
+    return null;
+  };
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch((error) => {
+              console.error("Error playing video:", error);
+            });
+        }
       }
-    } catch (error) {
-      toast.error('Failed to like video');
     }
   };
 
-  return (
-    <div className="flex py-6 border-b border-gray-800">
-      {/* User avatar */}
-      <Link href={`/profile/${video.user?.id}`}>
-        <div className="mr-3 cursor-pointer">
-          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-red-500 flex items-center justify-center text-white font-bold">
-            {video.user?.username?.[0]?.toUpperCase() || 'U'}
-          </div>
-        </div>
-      </Link>
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  };
 
+  const handleLike = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to like videos");
+      return;
+    }
+    try {
+      if (isLiked) {
+        await unlikeVideo(video.id);
+        setIsLiked(false);
+        setLikeCount((prev) => prev - 1);
+      } else {
+        await likeVideo(video.id);
+        setIsLiked(true);
+        setLikeCount((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      toast.error("Failed to like/unlike video");
+    }
+  };
+
+  // Pause when scrolled out of view, but don't autoplay
+  useEffect(() => {
+    if (!videoRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (!entry.isIntersecting) {
+          if (videoRef.current) {
+            videoRef.current.pause();
+            setIsPlaying(false);
+          }
+        }
+      },
+      { threshold: 0.6 }
+    );
+
+    const currentVideo = videoRef.current;
+    if (currentVideo) observer.observe(currentVideo);
+    return () => {
+      if (currentVideo) observer.unobserve(currentVideo);
+    };
+  }, []);
+
+  const handleVideoError = () => {
+    console.error("Video failed to load:", video.videoUrl);
+    setVideoError(true);
+  };
+
+  return (
+    <div className="mb-8 flex border-b border-gray-200 pb-8">
+      {/* User avatar */}
+      <div className="mr-4">
+        <Link href={`/profile/${video.user?.id}`}>
+          <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-200">
+            {getAvatarUrl(video.user?.avatar) ? (
+              <img
+                src={getAvatarUrl(video.user?.avatar)}
+                alt={video.user?.username}
+                className="h-full w-full object-cover"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-blue-500 text-white font-bold text-lg">
+                {video.user?.username?.[0]?.toUpperCase() || '?'}
+              </div>
+            )}
+          </div>
+        </Link>
+      </div>
+
+      {/* Video content */}
       <div className="flex-1">
         {/* User info and caption */}
-        <div className="mb-2">
-          <Link href={`/profile/${video.user?.id}`}>
-            <span className="font-semibold text-white hover:underline cursor-pointer">
-              @{video.user?.username}
-            </span>
+        <div className="mb-3">
+          <Link
+            href={`/profile/${video.user?.id}`}
+            className="font-semibold hover:underline"
+          >
+            {video.user?.username}
           </Link>
-          <span className="text-gray-400 text-sm ml-2">
-            {new Date(video.createdAt).toLocaleDateString()}
-          </span>
-          <p className="text-white text-sm mt-1">{video.title}</p>
+          <p className="mt-1">{video.caption}</p>
+          {video.sound && (
+            <p className="mt-1 flex items-center text-sm">
+              <FaMusic className="mr-1" /> {video.sound}
+            </p>
+          )}
         </div>
 
-        {/* Audio info */}
-        <div className="flex items-center text-gray-400 text-sm mb-3">
-          <FaMusic className="mr-2 text-xs" />
-          <span className="truncate max-w-[250px]">Original Audio</span>
-        </div>
-
+        {/* Video and interaction */}
         <div className="flex">
           {/* Video container */}
-          <div className="mr-5 w-[300px] h-[530px] bg-black rounded-md flex items-center justify-center relative overflow-hidden cursor-pointer">
-            <video 
-              src={`http://localhost:8000${video.url}`}
-              className="w-full h-full object-contain"
-              controls
-              poster={video.thumbnail}
-            />
+          <div className="relative mr-4 h-[600px] w-[336px] overflow-hidden rounded-lg bg-black">
+            {!videoError ? (
+              <>
+                <video
+                  ref={videoRef}
+                  onClick={togglePlay}
+                  className="h-full w-full object-contain"
+                  loop
+                  muted={isMuted}
+                  playsInline
+                  poster={video.thumbnailUrl ? getFullVideoUrl(video.thumbnailUrl) : undefined}
+                  onError={handleVideoError}
+                >
+                  <source
+                    src={getFullVideoUrl(video.videoUrl)}
+                    type="video/mp4"
+                  />
+                </video>
+
+                {/* Mute/unmute button */}
+                <button
+                  onClick={toggleMute}
+                  className="absolute bottom-4 right-4 bg-black bg-opacity-50 rounded-full p-2 text-white z-10"
+                >
+                  {isMuted ? <FaVolumeMute size={20} /> : <FaVolumeUp size={20} />}
+                </button>
+
+                {/* Play button overlay - shown when paused */}
+                {!isPlaying && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center cursor-pointer"
+                    onClick={togglePlay}
+                  >
+                    <button className="rounded-full bg-black bg-opacity-50 p-4 text-white text-2xl">
+                      ▶️
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center bg-black text-white">
+                <p className="mb-2">Video unavailable</p>
+                <p className="text-sm text-gray-400">Unable to load video</p>
+              </div>
+            )}
           </div>
-          
+
           {/* Interaction buttons */}
-          <div className="flex flex-col justify-end space-y-4 py-2">
-            {/* Like button */}
-            <button className="flex flex-col items-center group" onClick={handleLike}>
-              <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-gray-700 transition-colors">
-                {liked ? (
-                  <FaHeart className="text-red-500 text-xl" />
-                ) : (
-                  <FaRegHeart className="text-white text-xl" />
-                )}
-              </div>
-              <span className="text-white text-xs mt-1">{likesCount}</span>
-            </button>
-
-            {/* Comment button */}
-            <button 
-              className="flex flex-col items-center group"
-              onClick={() => setShowComments(!showComments)}
+          <div className="flex flex-col items-center justify-end space-y-4">
+            <button
+              onClick={handleLike}
+              className={`flex flex-col items-center ${isLiked ? "text-red-500" : ""}`}
             >
-              <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-gray-700 transition-colors">
-                <FaComment className="text-white text-xl" />
+              <div className="rounded-full bg-gray-100 p-3">
+                <FaHeart size={20} />
               </div>
-              <span className="text-white text-xs mt-1">{video.commentCount || 0}</span>
+              <span className="mt-1 text-xs">{likeCount}</span>
             </button>
 
-            {/* Share button */}
-            <button className="flex flex-col items-center group">
-              <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-gray-700 transition-colors">
-                <FaShare className="text-white text-xl" />
-              </div>
-              <span className="text-white text-xs mt-1">{video.shareCount || 0}</span>
-            </button>
-
-            {/* Save button */}
-            <button 
-              className="flex flex-col items-center group"
-              onClick={() => setSaved(!saved)}
+            <Link
+              href={`/video/${video.id}`}
+              className="flex flex-col items-center"
             >
-              <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-gray-700 transition-colors">
-                {saved ? (
-                  <FaBookmark className="text-yellow-500 text-xl" />
-                ) : (
-                  <FaRegBookmark className="text-white text-xl" />
-                )}
+              <div className="rounded-full bg-gray-100 p-3">
+                <FaComment size={20} />
               </div>
-              <span className="text-white text-xs mt-1">Save</span>
+              <span className="mt-1 text-xs">{video.commentCount || 0}</span>
+            </Link>
+
+            <button className="flex flex-col items-center">
+              <div className="rounded-full bg-gray-100 p-3">
+                <FaShare size={20} />
+              </div>
+              <span className="mt-1 text-xs">Share</span>
             </button>
           </div>
         </div>
-
-        {/* Comments section */}
-        {showComments && (
-          <div className="mt-4 pl-4 border-l-2 border-gray-700">
-            <h4 className="text-white font-semibold mb-2">Comments</h4>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {video.comments?.map((comment) => (
-                <div key={comment.id} className="flex gap-2">
-                  <div className="h-6 w-6 rounded-full bg-gray-600"></div>
-                  <div>
-                    <p className="text-white text-sm">
-                      <span className="font-semibold">@{comment.user?.username}</span> {comment.content}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {(!video.comments || video.comments.length === 0) && (
-                <p className="text-gray-400 text-sm">No comments yet</p>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
-}
+};
+
+export default VideoCard;
