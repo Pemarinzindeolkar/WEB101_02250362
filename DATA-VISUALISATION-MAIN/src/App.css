@@ -1,0 +1,36 @@
+.main {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    font: 10px "Arial", sans-serif;
+  }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    gap: 20px;
+    margin-top: 2rem;
+  }
+  
+  .card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+  }
+  
+  .chartContainer {
+    height: 200px;
+    width : 100%;
+    margin-top: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .chartContainer {
+      height: 250px;
+    }
+  }
